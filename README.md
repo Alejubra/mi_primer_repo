@@ -1,4 +1,4 @@
-#mi primer repo
+# mi primer repo
 
 Repositorio de prueba para el Taller de programación en R para Análisis de Datos II.
 
