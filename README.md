@@ -1,7 +1,4 @@
-# mi_primer_repo
-Repositorio de prueba 1 para el taller de programación II
-
-#**mi primer repo**
+#mi primer repo
 
 Repositorio de prueba para el Taller de programación en R para Análisis de Datos II.
 
