@@ -11,7 +11,6 @@ En este curso aprendemos los fundamentos de la programación en R y cómo aplica
 
 |                    Contenido                       | Duración aproximada |
 |                     :---:                          |        :---:        |
-|
 |Git, github, trabajo colaborativo y herramientas    |   3 semanas         |
 |para la gestión de versiones de código              |                     |
 |Preparación de datos para análisis en R             |   4 semanas         |
@@ -21,7 +20,7 @@ En este curso aprendemos los fundamentos de la programación en R y cómo aplica
 
 **Recursos adicionales**
 
-- ( - ) Enlace a la documentación oficial de R
+- Enlace a la documentación oficial de R
 
 **Ejercicios y Proyectos**
 
