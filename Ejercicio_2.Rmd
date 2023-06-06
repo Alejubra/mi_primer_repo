@@ -1,0 +1,43 @@
+---
+title: "Ejercicio 2"
+author: "Alejandra Ureña Bravo"
+date: "2023-06-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(datasets)
+```
+
+```{r}
+datasets.autos <- datasets::mtcars
+```
+
+```{r}
+?mtcars
+```
+
+
+```{r}
+hp_mayor_cien <- datasets.autos |> 
+  filter(hp >100)
+```
+```{r}
+hp_mayor_cien |> 
+  arrange(desc(hp))
+```
+
+```{r}
+mpg_hp_wt <- hp_mayor_cien |> 
+  select(mpg,hp,wt)
+```
+
+```{r}
+glimpse(mpg_hp_wt)
+```
+```{r}
+summary(mpg_hp_wt)
+```
+
