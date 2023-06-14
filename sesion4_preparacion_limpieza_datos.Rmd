@@ -1,0 +1,314 @@
+---
+title: "Sesión 4 Preparación y limpieza de datos"
+author: "Kimberley Isabel Orozco Cornejo"
+date: "2023-06-10"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(readr)
+library(readxl)
+library(tidyr)# doma de datos
+library(janitor) #limpieza de datos
+library(lubridate)
+library(hms)
+```
+
+# Preparación y limpieza de datos
+
+La preparación y limpieza de datos, también conocida como preprocesamiento de datos, 
+es una fase crítica en cualquier proceso de análisis y visualización de datos. Antes 
+de que los datos puedan ser analizados o visualizados de manera efectiva, deben ser 
+inspeccionados y transformados en un formato que sea adecuado para el análisis. Esto 
+puede implicar la identificación y manejo de datos faltantes, la corrección de errores 
+e inconsistencias, la identificación y eliminación de duplicados y la transformación de 
+datos en formatos útiles. Esta etapa es crucial, ya que la calidad de los datos influirá directamente en los resultados obtenidos en los análisis subsiguientes.
+
+Algunas de las etapas en la preparación y limpieza de datos son:
+
+- Carga (lectura) de datos.
+- Limpiar nombres de las columnas (variables)
+- Identificación de observaciones duplicadas y/o deduplicación
+- Detección y tratamiento de datos faltantes
+- Transformación de variables
+- Creación de nuevas variables
+
+## Carga o lectura de datos
+
+Para este ejemplo vamos a trabajar con datos correspondientes a encuentros de personas
+con casos sospechosos de COVID. Esta es una muestra de datos almacenados por medio
+de una aplicación de teléfono. Las fechas están en formato dia/mes/anyo.
+
+```{r}
+datos_infeccion <- data.frame(
+  `Record ID`  = c(1,1,2,3,4,5,6,7,8,9,10,11,12,13,14,NA,"",15,16,17,18, 19, 19, NA, NA),
+  `Persona ID`  = c(1,1,2,2,3,2,4,5,6,7,2,1,3,3,4, "", "",5,5,7,8, 8, 8, NA, NA),
+  NOMBRE      = c("adam", "adam", "amrish", "amrish", "mariah", "amrish", "nikhil", "brian", "smita", "raquel", "amrish", "monica", "john",
+                "adam", "mariah", "", "", "brian", "brian", "raquel", "natalie", "maria", "maria", NA, NA),
+  Fecha      = c("1/1/2020", "1/1/2020", "2/1/2020", "2/1/2020", "5/1/2020", "5/1/2020", "5/1/2020", "5/1/2020", "5/1/2020","5/1/2020", "2/1/2020",
+                "5/1/2020", "6/1/2020", "6/1/2020", "6/1/2020", "", "", "6/1/2020", "7/1/2020", "7/1/2020", "7/1/2020", "6/1/2020", "6/1/2020", NA, NA),
+  `HORA encuentro`      = c("09:00:00", "09:00:00", "14:20:00", "14:20:00", "12:00:00", "16:10:00", "13:01:00", "15:20:00", "14:20:00", "12:30:00", "10:24:00",
+                "09:40:00", "07:25:00", "08:32:00", "15:36:00","","", "15:31:00", "07:59:00", "11:13:00", "17:12:00", "11:17:00", "11:17:00", NA, NA),
+  `razon encuentro`   = c("contact", "contact", "contact", "contact", "case", "case", "contact", "contact", "contact", "contact", "contact",
+                "case", "contact", "contact", "contact", "", "", "contact", "case", "contact", "case", "No info", "No info", NA, NA),
+  `presento sintomas` = c(NA, NA, "N", "No", "No", "Yes", "Yes", "No", "Yes", NA, "Y",
+                    "No", "No", "No", "Y", "", "", "Yes", "No","No", "No", "Yes", "Yes", NA, NA),
+  telefono = c(rep(NA, 25))) 
+```
+
+## Limpiar nombre de las variables
+
+Muy comúnmente, los nombres de las variables de un conjunto de datos proporcionado
+puede venir "sucio" y con nombres poco representativos o con caracteres especiales.
+Ya conocemos varias maneras de manejar esto, por ejemplo con la función rename de dplyr
+o clean_names de janitor.
+
+Por ejemplo, para este caso:
+
+```{r}
+datos_limpios <- datos_infeccion |> 
+  clean_names()
+```
+
+Los nombres son transformados en un formato legible por R. Recuerde que puede usar
+rename si adicionalmente desea renombrar alguna columna, que muy usualmente es necesario.
+
+## Identificación de duplicados y deduplicación
+
+Es común que en los datos crudos que recibamos, a veces existan valores duplicados.
+En algunos casos es normal y en otros casos puede que identificarlos nos sirva
+a responder preguntas interesantes.
+
+Algunas cosas para tener en cuenta al revisar los datos:
+
+Los primeros dos registros son duplicados completos al 100%, incluyendo el registroID 
+duplicado (¡debe ser un fallo informático!)
+
+Las dos filas siguientes son duplicados en todas las columnas, excepto en el registroID.
+
+Varias personas tuvieron múltiples encuentros telefónicos, en diferentes fechas y horas, tanto como contactos y/o casos.
+
+En cada encuentro, se les preguntó a las personas si alguna vez habían tenido síntomas, y falta parte de esta información.
+
+Indaguemos más a fondo los datos. Una tarea crítica implica identificar y 
+eliminar registros duplicados para evitar sesgos en el análisis de datos. 
+
+### Examina filas duplicadas
+
+Para revisar rápidamente las filas que tienen duplicados, podemos usar get_dupes() del 
+paquete janitor. De forma predeterminada, se consideran todas las columnas al evaluar 
+duplicados; las filas devueltas por la función son duplicados al 100% considerando los 
+valores de todas las columnas.
+
+En nuestros datos_infeccion, las dos primeras filas son duplicados completos al 100%: 
+tienen el mismo valor en cada columna (incluyendo la columna "recordID", que se 
+supone que es única). El objeto datos devuelto incluye automáticamente una nueva 
+columna llamada "dupe_count" en el lado derecho, que muestra el número de filas con 
+esa combinación de valores duplicados.
+
+```{r}
+# Obtener una lista de las filas duplicadas y su número
+filas_duplicadas <- datos_limpios |>  
+  janitor::get_dupes()
+```
+
+Sin embargo, si decidimos ignorar el registroID, las filas 3 y 4 también son duplicados 
+una de la otra. Es decir, tienen los mismos valores en todas las columnas excepto 
+en el registroID. Puedes especificar columnas específicas para ser ignoradas en 
+la función utilizando el símbolo de menos (-).
+
+```{r}
+# Duplicados sin considerar la columna recordID
+filas_duplicadas_sin_id <- datos_limpios |> 
+  janitor::get_dupes(-record_id) |> 
+  distinct()
+```
+
+Cuando trabajamos con datos, poder identificar este tipo de duplicados y su causa
+puede ser de gran valor.
+
+Podemos también indicar en la función get_dupes() las columnas a considerar:
+
+```{r}
+# duplicados basados solo en name y purpose
+datos_limpios |>  
+  janitor::get_dupes(nombre, razon_encuentro)
+```
+
+Si queremos obtener solo una fila con los registros duplicados por fila, podemos 
+hacer esto:
+
+```{r}
+datos_limpios |>
+  janitor::get_dupes(nombre, razon_encuentro) |> 
+  select(nombre, razon_encuentro, dupe_count) |> 
+  distinct()
+```
+
+## Eliminar duplicados
+
+En este caso, suponemos que el record_id no es de importancia y por ello vamos a 
+eliminar esta variable de la subsiguiente preparación de datos.
+
+Podemos utilizar la función distinct() de dplyr para eliminar duplicados en las 
+observaciones de nuestros datos.
+
+```{r}
+datos_deduplicados <- datos_limpios |> 
+  select(-record_id) |> 
+  distinct()
+```
+
+Observe que quedaron dos filas aparentemente vacías iguales. Cuando esto pasa,
+usualmente es que hubo espacios vacíos de caracteres de distintas longitudes. De esto
+nos encargaremos más adelante.
+
+## Transformación de los tipos de variables
+
+Es de gran importancia prestar atención a los tipos de las variables de nuestros conjuntos
+de datos, y determinar si es necesario cambiar el tipo (clase) de la variable.
+En este caso, al hacer un glimpse vemos que:
+
+```{r}
+glimpse(datos_deduplicados)
+```
+
+## Detección y tratamiento de datos faltantes
+
+Hay varias estrategias que podemos aplicar cuando lidiamos con datos faltantes o 
+vacíos:
+
+- Reemplazar valores "vacíos" con NA
+
+Para reemplazar espacios vacíos con NA, podemos usar la función na_if y mutate_all
+de dplyr, como se muestra a continuación:
+
+```{r}
+datos_con_na <- datos_deduplicados |> 
+  mutate_all(na_if, "")
+```
+
+- Eliminar filas vacías
+
+Podemos eliminar las filas vacías, que no nos da ninguna información adicional
+en nuestro conjunto de datos. Esto se logra con la función remove_empty de janitor.
+Esta función eliminará todas aquellas filas (y/o columnas) en las cuales hay solamente
+valores vacíos.
+
+```{r}
+datos_sin_vacios <- datos_con_na |> 
+  remove_empty(which = c("rows", "cols")) # remueve filas y columnas vacías
+```
+
+Note que al hacer esto, perdemos la columna "telefono", ya que no contenía ninguna
+información relevante.
+
+- Eliminar todas las filas que tengan algún NA
+
+Si queremos dejar solamente aquellas filas en donde no haya ningún NA, podemos
+usar la función drop_na()
+
+```{r}
+datos_sin_na <- datos_sin_vacios |> 
+  drop_na()
+```
+
+Observe que en este caso perdemos filas que tenían información relevante. Al usar
+esta estrategia, es importante indicarlo y documentarlo claramente, ya que no siempre
+es la mejor forma de solucionar problemas con NA. Use esta función con cuidado!
+
+- Reemplazar los NA por otros valores
+
+En muchos casos, es más indicado reemplazar los NA por algún valor que indique
+que hay información faltante.
+
+Por ejemplo, en la columna presento_sintomas, podría ser de utilidad reemplazar todos 
+los NA con "Sin información". Podemos lograr esto usando la función replace_na() de 
+tidyr. Lo mismo con la columna razon_encuentro.
+
+```{r}
+datos_infeccion_2 <- datos_sin_vacios |> 
+  mutate(presento_sintomas = replace_na(presento_sintomas, "Sin información"),
+         razon_encuentro = replace_na(razon_encuentro, "Sin información"))
+```
+
+## Transformación de datos
+
+En muchos casos adicionalmente, es posible que necesitemos hacer una transformación de
+nuestros datos. Por ejemplo, en este caso, observamos que en la columna presento_sintomas
+tenemos los siguientes valores en la tabla:
+
+```{r}
+datos_infeccion_2 |> 
+  distinct(presento_sintomas)
+```
+
+Yes y Y son lo mismo, lo mismo sucede con N y NO, por lo que conviene unificarlos 
+en un mismo valor. Lo podemos hacer con la función case_when:
+
+```{r}
+datos_infeccion_3 <- datos_infeccion_2 |> 
+  mutate(presento_sintomas = case_when(presento_sintomas == "N" ~ "No",
+                                       presento_sintomas %in% c("Y", "Yes") ~ "Si",
+                                       TRUE ~ presento_sintomas # mantiene iguales los que no cumplen las condiciones
+                                       ))
+```
+
+## Tip adicional sobre valores faltantes
+
+En otros casos donde los datos contienen variables numéricas, puede ser de utilidad
+reemplazar los NA por la media o el promedio de los datos. Para ilustrar esto suponga
+el siguiente conjunto de datos que muestra las notas obtenidas en fisica, quimica
+y matematica por 3 estudiantes:
+ 
+```{r}
+notas <- data.frame( Name = c("Bruno", "Emilio", "Jay", "Carla"),
+   fisica = c(98, 87, 91, 94),
+   quimica = c(NA, 84, 93, 87),
+   matematica = c(91, 86, NA, NA) )
+```
+
+Si quisiéramos llenar estos NA con valores numéricos, podríamos incluir la mediana
+de los datos de esta manera:
+
+```{r}
+# usamos mutate para añadir una columna con la media por persona
+
+notas_con_media <- notas |> 
+  rowwise() |> #indica que la operación debe hacerse por fila
+  mutate(median_score = median(c(fisica, quimica, matematica), na.rm = TRUE))
+
+# reemplazamos na con la media
+notas_sin_na <- notas_con_media |> 
+  mutate(across(c(fisica, quimica, matematica), ~ ifelse(is.na(.), median_score, .)))
+```
+
+## Práctica en grupos
+
+Para la práctica en grupos, vamos a cargar datos correspondientes a registros hospitalarios.
+Estos datos están almacenados en un repositorio de github como csv. Podemos leerlos
+con la función read_csv de readr.
+
+1. Carga de los datos
+
+```{r}
+datos_hospital <- read_csv2("https://raw.githubusercontent.com/isa229/programacion_analisis_datos_ii/main/registros_hospitales2.csv")
+```
+
+2. Determine si hay filas duplicadas. En el caso de que haya, cuántas y cuáles son?
+
+3. Elimine las filas y columnas vacías (si hay). Cuántas filas vacías eliminó? Eliminó 
+alguna columna?
+
+4. Para las columnas chills, cough, aches, vomit coloque "Sin información"
+en donde haya NAs, además donde diga "Yes", cámbielo por "Sí"
+
+5. Cree una nueva columna llamada tiene_fiebre que se calcule de la siguiente manera:
+Si la temperatura es mayor o igual que 37, diga "Si", pero si la temperatura es menor a 37, diga "No".
+
+6. Revise el conjunto de datos e implemente otras estrategias de limpieza y preparación
+de datos que le parezcan relevantes para este conjunto de datos.
