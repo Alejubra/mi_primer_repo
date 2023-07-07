@@ -25,18 +25,28 @@ hp_mayor_cien <- datasets.autos |>
   filter(hp >100)
 ```
 ```{r}
-hp_mayor_cien |> 
+autos_ordenados <- hp_mayor_cien |> 
   arrange(desc(hp))
 ```
 
 ```{r}
-mpg_hp_wt <- hp_mayor_cien |> 
+mpg_hp_wt <- autos_ordenados |> 
   select(mpg,hp,wt)
 ```
 
 ```{r}
 glimpse(mpg_hp_wt)
 ```
+
+```{r}
+tabla_resumen <- mpg_hp_wt |> 
+  summarise (promedio_mpg = mean(mpg),
+            promedio_hp = mean(hp),
+            promedio_wt = mean(wt))
+```
+
+
+
 ```{r}
 summary(mpg_hp_wt)
 ```
