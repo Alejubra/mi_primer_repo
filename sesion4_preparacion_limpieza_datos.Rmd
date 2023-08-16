@@ -30,12 +30,12 @@ datos en formatos útiles. Esta etapa es crucial, ya que la calidad de los datos
 
 Algunas de las etapas en la preparación y limpieza de datos son:
 
-- Carga (lectura) de datos.
-- Limpiar nombres de las columnas (variables)
-- Identificación de observaciones duplicadas y/o deduplicación
-- Detección y tratamiento de datos faltantes
+- Carga (lectura) de datos (los datos pueden venir de varias fuentes, un csv, un excel, una base de datos, stora accaount nube, bucket, entre otros)
+- Limpiar nombres de las columnas (variables, de queson, cual es el contecto, que tipo de variables se tiene,entender los datos en general, a veces los nombres de las variables no son representativos, o tienen caracteres especiales, vienen columnas vacias, entre otros)
+- Identificación de observaciones duplicadas y/o de duplicación de datos (a veces los datos pueden venir desordenados, sucios, las observaciones pueden venir doble o triple o pueden haber filas que se repitan, por ende es importante desacerse de esos duplicados)
+- Detección y tratamiento de datos faltantes 
 - Transformación de variables
-- Creación de nuevas variables
+- Creación de nuevas variables (por ejemplo utilizando la función mutate de dplyr)
 
 ## Carga o lectura de datos
 
@@ -67,6 +67,8 @@ puede venir "sucio" y con nombres poco representativos o con caracteres especial
 Ya conocemos varias maneras de manejar esto, por ejemplo con la función rename de dplyr
 o clean_names de janitor.
 
+La recomendación para unir el nombre de una variable que viene dividida con espacios es por medio de un _ (guión bajo).La función clean names de janitor de manera automática hace ese tipo de ajustes.
+
 Por ejemplo, para este caso:
 
 ```{r}
@@ -77,7 +79,7 @@ datos_limpios <- datos_infeccion |>
 Los nombres son transformados en un formato legible por R. Recuerde que puede usar
 rename si adicionalmente desea renombrar alguna columna, que muy usualmente es necesario.
 
-## Identificación de duplicados y deduplicación
+## Identificación de duplicados y deduplicación (desacerse de filas o columnas redundantes)
 
 Es común que en los datos crudos que recibamos, a veces existan valores duplicados.
 En algunos casos es normal y en otros casos puede que identificarlos nos sirva
@@ -108,7 +110,9 @@ En nuestros datos_infeccion, las dos primeras filas son duplicados completos al 
 tienen el mismo valor en cada columna (incluyendo la columna "recordID", que se 
 supone que es única). El objeto datos devuelto incluye automáticamente una nueva 
 columna llamada "dupe_count" en el lado derecho, que muestra el número de filas con 
-esa combinación de valores duplicados.
+esa combinación de valores duplicados (es decir cuantas veces se repite al 100% esa fila).
+
+Esta función lo que devuelve es una tabla con los valores duplicados al 100% en todas las columnas.
 
 ```{r}
 # Obtener una lista de las filas duplicadas y su número
@@ -116,20 +120,31 @@ filas_duplicadas <- datos_limpios |>
   janitor::get_dupes()
 ```
 
+Además, recordar, que la función get_dupes () identifica que registros están duplicados, entonces para eliminarlos se usa la función distinct ().
+
+```{r}
+filas_duplicadas_distintas <- datos_limpios |>  
+  janitor::get_dupes() |> 
+  distinct()
+```
+
+
+
 Sin embargo, si decidimos ignorar el registroID, las filas 3 y 4 también son duplicados 
 una de la otra. Es decir, tienen los mismos valores en todas las columnas excepto 
 en el registroID. Puedes especificar columnas específicas para ser ignoradas en 
 la función utilizando el símbolo de menos (-).
 
+
 ```{r}
-# Duplicados sin considerar la columna recordID
+# Duplicados sin considerar la columna recordID (los :: es para decir que dicha función le pertenece a x ,libreria, en este caso la libreria es janitor)
 filas_duplicadas_sin_id <- datos_limpios |> 
   janitor::get_dupes(-record_id) |> 
   distinct()
 ```
 
 Cuando trabajamos con datos, poder identificar este tipo de duplicados y su causa
-puede ser de gran valor.
+puede ser de gran valor, como para hacer reortes que indiquen que están sucediendo duplicados, para que se tomen medidas correctivas por ejemplo dentro de una app.
 
 Podemos también indicar en la función get_dupes() las columnas a considerar:
 
@@ -185,19 +200,27 @@ vacíos:
 - Reemplazar valores "vacíos" con NA
 
 Para reemplazar espacios vacíos con NA, podemos usar la función na_if y mutate_all
-de dplyr, como se muestra a continuación:
+de dplyr (lo que hace es mutar, transformar, todas las columnas y ordena: aplique lo siguiente...), como se muestra a continuación:
+
+Esta funcion lo que hace es colocar un NA si hay un espacio vacío.
 
 ```{r}
 datos_con_na <- datos_deduplicados |> 
+  select(-telefono) |> 
   mutate_all(na_if, "")
 ```
+
+Lo que significa esa línea de código anterior es: si alguna observación es un espacio vacio, entonces transformela en NA.
+
+Los NAs son más sencillos de manejar en RStudio que los espacios vacios. 
+
 
 - Eliminar filas vacías
 
 Podemos eliminar las filas vacías, que no nos da ninguna información adicional
 en nuestro conjunto de datos. Esto se logra con la función remove_empty de janitor.
 Esta función eliminará todas aquellas filas (y/o columnas) en las cuales hay solamente
-valores vacíos.
+valores vacíos (NA).
 
 ```{r}
 datos_sin_vacios <- datos_con_na |> 
@@ -236,6 +259,12 @@ datos_infeccion_2 <- datos_sin_vacios |>
          razon_encuentro = replace_na(razon_encuentro, "Sin información"))
 ```
 
+Lo que ordena el código anterior es: Reemplace valores NA de la columna xx con la frase sin información. 
+
+Cuando son variables numéricas se sustituye por promedios por ejemplo.
+
+Cuando son muchas variables las que se deben sustituir, se usa una libreria poor (dato a no olvidar, xq no profundizaremos acerca de esti en clases, lo que hace es reescribir sobre una función.)
+
 ## Transformación de datos
 
 En muchos casos adicionalmente, es posible que necesitemos hacer una transformación de
@@ -250,13 +279,29 @@ datos_infeccion_2 |>
 Yes y Y son lo mismo, lo mismo sucede con N y NO, por lo que conviene unificarlos 
 en un mismo valor. Lo podemos hacer con la función case_when:
 
+~ significa transformar
+
+Lo que significa las siguientes líneas de código es:
+cuando presentó sintomas = a N transformela en NO, 
+Sí presentó sintomas esta entre Y y Yes transformelo en Si,
+TRUE: y todo lo que no caiga en alguno de estos dos casos dejelo igual.
+
+TRUE = mantiene iguales los que no cumplen las condiciones.
+
+
 ```{r}
 datos_infeccion_3 <- datos_infeccion_2 |> 
   mutate(presento_sintomas = case_when(presento_sintomas == "N" ~ "No",
                                        presento_sintomas %in% c("Y", "Yes") ~ "Si",
-                                       TRUE ~ presento_sintomas # mantiene iguales los que no cumplen las condiciones
-                                       ))
+                                       TRUE ~ presento_sintomas)) 
 ```
+
+
+
+En caso de necesitar aplicar otro mutate al código anterior, solo se agrega un pipe despues del )) y se puede continuar el ejecicio anterior agregando esto:
+|>  
+mutate(razon_encuentro = case_when(razon_encuentro == "No info" ~ "Sin información",
+TRUE ~ razon_encuentro))
 
 ## Tip adicional sobre valores faltantes
 
@@ -274,9 +319,10 @@ notas <- data.frame( Name = c("Bruno", "Emilio", "Jay", "Carla"),
 
 Si quisiéramos llenar estos NA con valores numéricos, podríamos incluir la mediana
 de los datos de esta manera:
+(imputar)
 
 ```{r}
-# usamos mutate para añadir una columna con la media por persona
+# usamos mutate para añadir una columna con la mediana por persona
 
 notas_con_media <- notas |> 
   rowwise() |> #indica que la operación debe hacerse por fila
@@ -284,8 +330,9 @@ notas_con_media <- notas |>
 
 # reemplazamos na con la media
 notas_sin_na <- notas_con_media |> 
-  mutate(across(c(fisica, quimica, matematica), ~ ifelse(is.na(.), median_score, .)))
+  mutate(across(c(fisica, quimica, matematica), ~ ifelse(is.na(.), median_score, .))) #si alguna de las observaciones es na escriba la media
 ```
+si las observaciones en quimica, fisica y mate, alguna es NA deje la mediana.
 
 ## Práctica en grupos
 
